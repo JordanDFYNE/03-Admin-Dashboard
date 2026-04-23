@@ -10,16 +10,7 @@ import {
   Legend,
 } from 'recharts';
 
-const salesData = [
-  { month: 'Jan', sales: 4000 },
-  { month: 'Feb', sales: 3000 },
-  { month: 'Mar', sales: 2000 },
-  { month: 'Apr', sales: 4500 },
-  { month: 'May', sales: 6000 },
-  { month: 'Jun', sales: 5500 },
-];
-
-const SalesTrendChart = () => {
+const SalesTrendChart = ({ data = [] }) => {
   return (
     <motion.div
       className="bg-gray-800 bg-opacity-50 backdrop-blur-md shadow-lg rounded-xl p-6 border border-gray-700"
@@ -27,12 +18,12 @@ const SalesTrendChart = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
     >
-      <h2 className="text-xl font-semibold text-gray-100 mb-4">Sales Trend</h2>
+      <h2 className="text-xl font-semibold text-gray-100 mb-4">Weekly Usage Trend</h2>
       <div style={{ width: '100%', height: 300 }}>
         <ResponsiveContainer>
-          <LineChart data={salesData}>
+          <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis dataKey="month" stroke="#9CA3AF" />
+            <XAxis dataKey="period" stroke="#9CA3AF" />
             <YAxis stroke="#9CA3AF" />
             <Tooltip
               contentStyle={{
@@ -42,7 +33,7 @@ const SalesTrendChart = () => {
               itemStyle={{ color: '#E5E7EB' }}
             />
             <Legend />
-            <Line type="monotone" dataKey="sales" stroke="#8B5CF6" strokeWidth={2} />
+            <Line type="monotone" dataKey="usage" stroke="#8B5CF6" strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
       </div>

@@ -31,3 +31,5 @@ build/
 .env
 .env.*
 Thumbs.db
+server/node_modules/
+server/.env

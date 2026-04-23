@@ -1,0 +1,46 @@
+Stock name ,Unit Type,Locations,Quantity Avaliable ,Unit Quantity,Unit price ,Qty per box or pallet,Production Time (Days),Transit Time (Days),Min order,Status of stock,Ordered?,Quantity on order,Estimated delivery,Supplier,Contact for re-order,Notes,Tags
+DFYNE boxes Extra Small H10xW30xL40,Boxes,Unit 1 and 3,72,,,250,25 to 30,10 Days air or 4 months by boat,4,order,FALSE,0,,China,Logistics,,Zebra Scanner
+DFYNE Boxes Small H20xW30xL40,Boxes,Unit 1 and 3,15,,,0,25 to 30,10 Days air or 4 months by boat,10,ok,FALSE,0,,China,Logistics,,sellotape
+DFYNE Boxes Medium H40xW30xL40,Boxes,Unit 1 and 3,23.5,,,0,25 to 30,10 Days air or 4 months by boat,40,order,TRUE,10,15th july,China,Logistics,10k due in august,return hangtags
+DFYNE Boxes Large H50xW40xL40,Boxes,Unit 1 and 3,166,17,,17,20,10 Days air or 4 months by boat,40,ok,FALSE,0,,China,Logistics,,autobagger ink ribbon
+DFYNE Bags Small 27x35 + 4cm,Boxes,Unit 1 and 3,154,,,1900,20,10 Days air or 4 months by boat,50,ok,FALSE,0,,China,Logistics,,autobagger labels
+DFYNE Bags Medium 37x45 + 4cm,Boxes,Unit 1 and 3,79,,,1300,20,10 Days air or 4 months by boat,30,ok,FALSE,0,,China,Logistics,,Autobag film LEFT
+DFYNE Bags Large 42x58 + 4cm,Boxes,Unit 1 and 3,11.5,,,800,20,10 Days air or 4 months by boat,40,order,FALSE,0,,China,Logistics,,Autobag film RIGHT
+DFYNE Bags X-Large 50x62 +4cm flap,Boxes,Unit 1 and 3,194,,,600,20,10 Days air or 4 months by boat,,,FALSE,0,,China,Logistics,,Printer labels
+DFYNE Frosted Bags X-Small 28x25x22,Boxes,Unit 1 and 3,1,,,1185,20,10 Days air or 4 months by boat,5,order,TRUE,3500,27/3/26,China,Logistics,,Printer toners
+DFYNE Frosted Bags Small 40x33x25,Boxes,Unit 1 and 3,89,,,1800,20,10 Days air or 4 months by boat,25,ok,TRUE,20000,27/3/26,China,Logistics,,Paper A4
+DFYNE Frosted Bags Medium 37x33x24cm,Boxes,Unit 1 and 3,19,,,1200,20,10 days air or 4months by boat, ,,TRUE,15000,27/3/26,China,Logistics,need more info from biran,Paper A5
+DFYNE frosted bag short puffer 67x27x22cm,Boxes,Unit 1 ,0,,,290,20,11 days air or 4 months by boat ,,,FALSE,0,,China,Logistics,,Clear collotape
+DFYNE frosted bag puffer 53x30x20cm,Boxes,Unit 1,4,,,350,20,12 days air or 4 months by boat,,,FALSE,0,,China,Logistics,,DFYNE cellotape
+DFYNE return hangtags,Boxes,Unit 1,22,,,4000,20,10 days air or 4 months by boat,4,ok,FALSE,,,China,Logistics,3 months cover for returns,
+DFYNE Return product labels 60x40mm,Boxes,Unit 1 and 3,32,,,20,0,1 to 2 days,20,ok,FALSE,0,,Amazon,Krzys,,
+Sellotape,Single,Unit 1,,,,36,0,1 to 3 days ,5,order,FALSE,0,,Amazon,Biran,,
+Gloves,Boxes,Unit 1,,,,,,,,,FALSE,,,,,,
+Lint Roller,Boxes,Unit 1,,,,5,n/a,3 days,5,order,FALSE,0,,Amazon,Biran,,
+Auto Bagger Ink Ribbon,Boxes,Unit 1 and 3 ,26,,,10,n/a,2 week,12,ok,FALSE,0,,Logopack,Operations (for now),Logopak,
+Auto Bagger Labels,Boxes,Unit 1 and 4,141,,,2,n/a,2 week,60,ok,FALSE,0,,Logopack,Operations (for now),Logopak,
+Auto Bagger Film LEFT,Single ,Unit 3,162,,,12,4 to 6 weeks,2 week,50,ok,FALSE,0,,Adpack,Operations (for now),,
+Auto Bagger Film RIGHT,Single,Unit 3,159,,,12,4 to 6 weeks,2 week ,50,ok,FALSE,0,,Adpack,Operations (for now),,
+Printer Labels,Boxes,Unit 3,5,,,12,n/a,1,10,,FALSE,0,,Amazon,Krzys,,
+Printer Toners,Single,Unit 3,51,1,,1,n/a,3,5,ok,FALSE,86,,Toner Giant,Simon,,
+Paper A4,Boxes,Unit 1 and 3,168,,,4000,n/a,3,11,ok,FALSE,0,,Meg/Lauren,meg@dfyne.com,,
+Paper A5,Boxes,Unit 1 and 3,185,,,5000,n/a,3,,ok,FALSE,0,,Meg/Lauren,meg@dfyne.com,,
+Clear Cellotape,Single,Unit 1 and 3,204,1,,24,n/a,1,5,ok,FALSE,0,,Amazon,Krzys,,
+DFYNE Cellotape,Single,Unit 1 and 3,58,1,,72,n/a,20,36,ok,FALSE,0,,Kite Packaging,Krzys,Krzys has approved design,
+Water 20L,Single,Unit 1 and 3,45,1,,1,n/a,4 days,20,ok,FALSE,100,,Eurofice supplies,Simon,,
+Cardboard Gaylords,pallet,Unit 3,5,,,140,n/a,7 to 10 days ,300,order,FALSE,510,,Reusabox,Simon,,
+Pallets UK,Single,Unit 1and 3,,1,,1,n/a,,150,order,FALSE,0,,Pallet 2 packaging ( Gina ),Gina,,
+Cable Ties DHL,Boxes,Unit 3,,,,1500,n/a,30 days,600,order,TRUE,1500,,DHL (Nathan),Krzys,,
+Bags DHL,Pallet,Unit 3,,,,0,n/a,3 or 4 days,200,,FALSE,0,,DHL (Nathan),Krzys,,
+Box Cutters and Safety Knives,Single,Unit 1 and 3,,,,5,n/a,1 day,10,order,FALSE,0,,Amazon,Krzys,,
+Hand Pallet Wrap,Single,Unit 1 and 3,389,,,6,n/a,1 day,16,ok,FALSE,0,,McFarlane Packaging,Krzys,,
+Pallet Wrap Machine,Single,Unit 1,45,,,46,n/a,1 day,20,ok,FALSE,0,,McFarlane Packaging,Krzys,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+Manual Packing Supplies,,,,,#N/A,,,,,,,,,,,,
+Returns Supplies,,,,,,,,,,,,,,,,,
+Autobagger Supplies,,,,,,,,,,,,,,,,,
+Warehouse Supplies,,,,,,,,,,,,,,,,,
+Dispatch Supplies,,,,,,,,,,,,,,,,,
