@@ -21,12 +21,12 @@ const ProductsPage = () => {
   }, [summary]);
 
   return (
-    <div className="flex-1 overflow-auto relative z-10">
+    <div className="relative z-10">
       <Header title="Consumables Inventory" />
 
-      <main className="max-w-7xl mx-auto py-6 px-4 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-4 sm:py-6 lg:px-8">
         <motion.div
-          className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8"
+          className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:mb-8 lg:grid-cols-4 lg:gap-5"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1 }}
@@ -53,7 +53,7 @@ const ProductsPage = () => {
         </motion.div>
 
         {error ? (
-          <div className="mb-8 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200">
+          <div className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200 lg:mb-8">
             {error}
           </div>
         ) : null}
@@ -65,7 +65,7 @@ const ProductsPage = () => {
           loading={loading}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
           <SalesTrendChart data={usageTrend} />
           <CategoryDistributionChart data={categories} />
         </div>
