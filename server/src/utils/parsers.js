@@ -1,10 +1,11 @@
 export function parseNumeric(value, fallback = 0) {
   if (value === null || value === undefined || value === '') return fallback;
 
-  const normalized = String(value)
-    .replace(/,/g, '')
-    .replace(/[^0-9.-]/g, '')
-    .trim();
+  const rawValue = String(value).trim();
+  if (!rawValue) return fallback;
+
+  const numericMatch = rawValue.match(/-?\d+(?:\.\d+)?/);
+  const normalized = numericMatch ? numericMatch[0] : '';
 
   if (!normalized) return fallback;
 

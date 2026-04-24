@@ -1,4 +1,25 @@
 import { normalizeName } from '../utils/parsers.js';
+import { buildConsumableBarcode } from './barcode-service.js';
+import { ensureLocation } from './location-service.js';
+import { createMovement } from './inventory-service.js';
+
+async function ensureSupplier(client, supplierName) {
+  const normalized = String(supplierName || '').trim();
+  if (!normalized) return null;
+
+  const result = await client.query(
+    `
+      insert into suppliers (name)
+      values ($1)
+      on conflict (name)
+      do update set updated_at = now()
+      returning id
+    `,
+    [normalized]
+  );
+
+  return result.rows[0].id;
+}
 
 export async function listConsumables(client, { search = '', lowStock = false } = {}) {
   const params = [];
@@ -35,11 +56,22 @@ export async function listConsumables(client, { search = '', lowStock = false } 
         c.quantity_on_order,
         c.default_reorder_point,
         c.default_reorder_qty,
+        c.contact_for_reorder,
+        c.source_locations,
         c.tags,
         s.name as supplier_name,
         b.barcode_value,
         coalesce(stock.total_qty, 0) as total_qty,
+        case
+          when cardinality(c.source_locations) > 0 then array_to_string(c.source_locations, ', ')
+          else 'Unassigned'
+        end as locations,
         coalesce(rr.min_qty, c.default_reorder_point, 0) as reorder_point,
+        case
+          when c.ordered = true or coalesce(stock.total_qty, 0) <= coalesce(rr.min_qty, c.default_reorder_point, 0)
+            then 'Yes'
+          else 'No'
+        end as reorder_list,
         coalesce(usage.last_7_day_usage, 0) as last_7_day_usage
       from consumables c
       left join suppliers s on s.id = c.supplier_id
@@ -66,29 +98,164 @@ export async function listConsumables(client, { search = '', lowStock = false } 
 
 export async function updateConsumable(client, consumableId, payload) {
   const normalizedName = normalizeName(payload.name);
+  const unitType = String(payload.unitType || '').trim() || 'Single';
+  const locations = Array.isArray(payload.sourceLocations)
+    ? payload.sourceLocations.map((value) => String(value).trim()).filter(Boolean)
+    : [];
+  const tags = Array.isArray(payload.tags)
+    ? payload.tags.map((value) => String(value).trim()).filter(Boolean)
+    : [];
+  const supplierId = await ensureSupplier(client, payload.supplierName);
   const result = await client.query(
     `
       update consumables
-      set name = $2,
-          normalized_name = $3,
-          unit_type = $4,
-          default_reorder_point = $5,
-          default_reorder_qty = $6,
+      set sku = $2,
+          name = $3,
+          normalized_name = $4,
+          unit_type = $5,
+          source_locations = $6,
+          supplier_id = $7,
+          contact_for_reorder = $8,
+          quantity_on_order = $9,
+          estimated_delivery_date = $10,
+          unit_quantity = $11,
+          unit_price = $12,
+          qty_per_pack = $13,
+          production_time_days = $14,
+          transit_time_text = $15,
+          min_order_qty = $16,
+          stock_status = $17,
+          ordered = $18,
+          default_reorder_point = $19,
+          default_reorder_qty = $20,
+          tags = $21,
+          notes = $22,
           updated_at = now()
       where id = $1 and is_active = true
       returning id, sku, name, unit_type, default_reorder_point, default_reorder_qty
     `,
     [
       consumableId,
+      payload.sku,
       payload.name,
       normalizedName,
-      payload.unitType,
-      payload.reorderPoint,
-      payload.reorderQuantity,
+      unitType,
+      locations,
+      supplierId,
+      payload.contactForReorder || null,
+      Number(payload.quantityOnOrder || 0),
+      payload.estimatedDeliveryDate || null,
+      Number(payload.unitQuantity || 0),
+      Number(payload.unitPrice || 0),
+      Number(payload.qtyPerPack || 0),
+      payload.productionTimeDays === '' ? null : Number(payload.productionTimeDays || 0),
+      payload.transitTimeText || null,
+      Number(payload.minOrderQty || 0),
+      payload.stockStatus || 'ok',
+      Boolean(payload.ordered),
+      Number(payload.reorderPoint || 0),
+      Number(payload.reorderQuantity || 0),
+      tags,
+      payload.notes || null,
     ]
   );
 
+  await client.query(
+    `
+      update reorder_rules
+      set min_qty = $2,
+          target_qty = $3,
+          updated_at = now()
+      where consumable_id = $1 and location_id is null
+    `,
+    [consumableId, Number(payload.reorderPoint || 0), Number(payload.reorderQuantity || 0)]
+  );
+
   return result.rows[0] || null;
+}
+
+export async function createConsumable(client, payload) {
+  const normalizedName = normalizeName(payload.name);
+  const locations = payload.locations || [];
+  const sku = String(payload.sku || '').trim() || `MANUAL-${Date.now()}`;
+  const unitType = String(payload.unitType || '').trim() || 'Single';
+  const reorderPoint = Number(payload.reorderPoint || 0);
+  const reorderQuantity = Number(payload.reorderQuantity || reorderPoint || 0);
+
+  const result = await client.query(
+    `
+      insert into consumables (
+        sku,
+        name,
+        normalized_name,
+        unit_type,
+        contact_for_reorder,
+        source_locations,
+        default_reorder_point,
+        default_reorder_qty,
+        stock_status,
+        ordered
+      )
+      values ($1, $2, $3, $4, $5, $6, $7, $8, 'ok', false)
+      returning id, sku, name, unit_type
+    `,
+    [
+      sku,
+      payload.name,
+      normalizedName,
+      unitType,
+      payload.contactForReorder || null,
+      locations,
+      reorderPoint,
+      reorderQuantity,
+    ]
+  );
+
+  const item = result.rows[0];
+
+  await client.query(
+    `
+      insert into barcode_records (barcode_value, barcode_format, entity_type, entity_id)
+      values ($1, 'code128', 'consumable', $2)
+      on conflict (barcode_value) do nothing
+    `,
+    [buildConsumableBarcode(item.id), item.id]
+  );
+
+  await client.query(
+    `
+      insert into reorder_rules (consumable_id, location_id, min_qty, target_qty)
+      values ($1, null, $2, $3)
+    `,
+    [item.id, reorderPoint, reorderQuantity]
+  );
+
+  if (payload.quantityAvailable > 0 && locations.length) {
+    for (const locationPayload of locations) {
+      const location = await ensureLocation(
+        client,
+        locationPayload.warehouseId,
+        locationPayload.name
+      );
+      if (!location) continue;
+
+      const splitQty = payload.quantityAvailable / locations.length;
+      await createMovement(client, {
+        movementType: 'receipt',
+        source: 'manual',
+        notes: 'Initial stock from manual add',
+        lines: [
+          {
+            consumableId: item.id,
+            locationId: location.id,
+            qtyDelta: splitQty,
+          },
+        ],
+      });
+    }
+  }
+
+  return item;
 }
 
 export async function archiveConsumable(client, consumableId) {
@@ -104,6 +271,128 @@ export async function archiveConsumable(client, consumableId) {
   );
 
   return result.rows[0] || null;
+}
+
+export async function getConsumableById(client, consumableId) {
+  const detailResult = await client.query(
+    `
+      with stock as (
+        select consumable_id, sum(qty_on_hand) as total_qty
+        from stock_balances
+        group by consumable_id
+      )
+      select
+        c.id,
+        c.sku,
+        c.name,
+        c.normalized_name,
+        c.unit_type,
+        c.unit_quantity,
+        c.unit_price,
+        c.qty_per_pack,
+        c.production_time_days,
+        c.transit_time_text,
+        c.min_order_qty,
+        c.quantity_on_order,
+        c.estimated_delivery_date,
+        c.contact_for_reorder,
+        c.notes,
+        c.tags,
+        c.stock_status,
+        c.ordered,
+        c.default_reorder_point,
+        c.default_reorder_qty,
+        c.source_locations,
+        c.created_at,
+        c.updated_at,
+        s.name as supplier_name,
+        s.contact_name as supplier_contact_name,
+        s.email as supplier_email,
+        s.phone as supplier_phone,
+        b.barcode_value,
+        coalesce(stock.total_qty, 0) as total_qty,
+        case
+          when cardinality(c.source_locations) > 0 then array_to_string(c.source_locations, ', ')
+          else 'Unassigned'
+        end as locations,
+        coalesce(rr.min_qty, c.default_reorder_point, 0) as reorder_point,
+        coalesce(rr.target_qty, c.default_reorder_qty, 0) as reorder_target
+      from consumables c
+      left join suppliers s on s.id = c.supplier_id
+      left join barcode_records b on b.entity_type = 'consumable' and b.entity_id = c.id and b.is_primary = true
+      left join stock on stock.consumable_id = c.id
+      left join reorder_rules rr on rr.consumable_id = c.id and rr.location_id is null and rr.is_active = true
+      where c.id = $1 and c.is_active = true
+      limit 1
+    `,
+    [consumableId]
+  );
+
+  const item = detailResult.rows[0];
+  if (!item) return null;
+
+  const [locationStockResult, weeklyChecksResult, movementHistoryResult] = await Promise.all([
+    client.query(
+      `
+        select
+          l.id,
+          l.code,
+          l.name,
+          sb.qty_on_hand,
+          sb.updated_at
+        from stock_balances sb
+        join locations l on l.id = sb.location_id
+        where sb.consumable_id = $1
+        order by l.name asc nulls last, l.code asc
+      `,
+      [consumableId]
+    ),
+    client.query(
+      `
+        select
+          wsc.check_date,
+          wsc.counted_qty,
+          l.name as location_name,
+          l.code as location_code,
+          wsc.notes
+        from weekly_stock_checks wsc
+        left join locations l on l.id = wsc.location_id
+        where wsc.consumable_id = $1
+        order by wsc.check_date desc
+        limit 20
+      `,
+      [consumableId]
+    ),
+    client.query(
+      `
+        select
+          sm.id,
+          sm.movement_type,
+          sm.source,
+          sm.notes,
+          sm.occurred_at,
+          sml.qty_delta,
+          sml.qty_before,
+          sml.qty_after,
+          l.name as location_name,
+          l.code as location_code
+        from stock_movement_lines sml
+        join stock_movements sm on sm.id = sml.movement_id
+        join locations l on l.id = sml.location_id
+        where sml.consumable_id = $1
+        order by sm.occurred_at desc
+        limit 20
+      `,
+      [consumableId]
+    ),
+  ]);
+
+  return {
+    item,
+    locationStock: locationStockResult.rows,
+    weeklyChecks: weeklyChecksResult.rows,
+    movementHistory: movementHistoryResult.rows,
+  };
 }
 
 export async function getConsumableSummary(client) {

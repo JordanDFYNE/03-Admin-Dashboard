@@ -69,3 +69,16 @@ export async function archiveConsumable(id) {
 
   return response?.item ?? null;
 }
+
+export async function fetchConsumableDetail(id) {
+  return apiRequest(`/consumables/${id}`);
+}
+
+export async function createConsumable(payload) {
+  const response = await apiRequest('/consumables', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  return response?.item ?? null;
+}

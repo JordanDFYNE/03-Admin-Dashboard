@@ -16,6 +16,16 @@ import { ensureLocation } from './location-service.js';
 import { createMovement, getCurrentBalance } from './inventory-service.js';
 import { recordAudit } from './audit-service.js';
 
+function valueFromRecord(record, ...keys) {
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(record, key)) {
+      return record[key];
+    }
+  }
+
+  return undefined;
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '../../..');
@@ -121,11 +131,13 @@ export async function importConsumablesCsv(
 
   for (const [index, record] of records.entries()) {
     const rowNumber = index + 2;
-    const stockName = String(record['Stock name '] || record['Stock name'] || '').trim();
+    const stockName = String(valueFromRecord(record, 'Stock name ', 'Stock name') || '').trim();
     if (!stockName) continue;
 
     const locations = splitLocations(record.Locations);
-    const quantityAvailable = parseNumeric(record['Quantity Avaliable ']);
+    const quantityAvailable = parseNumeric(
+      valueFromRecord(record, 'Quantity Avaliable ', 'Quantity Avaliable')
+    );
     const minOrderQty = parseNumeric(record['Min order']);
     const supplierId = await ensureSupplier(
       client,
@@ -139,7 +151,7 @@ export async function importConsumablesCsv(
       normalizedName: normalizeName(stockName),
       unitType: String(record['Unit Type'] || 'single').trim() || 'single',
       unitQuantity: parseNumeric(record['Unit Quantity']),
-      unitPrice: parseNumeric(record['Unit price ']),
+      unitPrice: parseNumeric(valueFromRecord(record, 'Unit price ', 'Unit price')),
       qtyPerPack: parseNumeric(record['Qty per box or pallet']),
       productionTimeDays: parseInteger(record['Production Time (Days)'], null),
       transitTimeText: String(record['Transit Time (Days)'] || '').trim() || null,
@@ -178,9 +190,9 @@ export async function importConsumablesCsv(
             sku, name, normalized_name, unit_type, unit_quantity, unit_price, qty_per_pack,
             production_time_days, transit_time_text, min_order_qty, quantity_on_order,
             estimated_delivery_date, supplier_id, contact_for_reorder, notes, tags,
-            stock_status, ordered, default_reorder_point, default_reorder_qty
+            stock_status, ordered, source_locations, default_reorder_point, default_reorder_qty
           )
-          values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+          values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
           on conflict (normalized_name)
           do update set unit_type = excluded.unit_type,
                         unit_quantity = excluded.unit_quantity,
@@ -197,6 +209,7 @@ export async function importConsumablesCsv(
                         tags = excluded.tags,
                         stock_status = excluded.stock_status,
                         ordered = excluded.ordered,
+                        source_locations = excluded.source_locations,
                         default_reorder_point = excluded.default_reorder_point,
                         default_reorder_qty = excluded.default_reorder_qty,
                         updated_at = now()
@@ -221,6 +234,7 @@ export async function importConsumablesCsv(
           previewRow.tags,
           previewRow.stockStatus,
           previewRow.ordered,
+          previewRow.locations,
           previewRow.defaultReorderPoint,
           previewRow.defaultReorderQty,
         ]

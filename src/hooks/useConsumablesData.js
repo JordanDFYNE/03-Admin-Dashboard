@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   archiveConsumable,
+  createConsumable,
   fetchConsumables,
   fetchConsumablesSummary,
   updateConsumable,
@@ -72,6 +73,10 @@ export function useConsumablesData(search) {
       },
       archiveItem: async (id) => {
         await archiveConsumable(id);
+        await refresh();
+      },
+      createItem: async (payload) => {
+        await createConsumable(payload);
         await refresh();
       },
     }),

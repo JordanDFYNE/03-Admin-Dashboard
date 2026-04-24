@@ -10,8 +10,17 @@ import { useConsumablesData } from '../hooks/useConsumablesData.js';
 
 const ProductsPage = () => {
   const [search, setSearch] = useState('');
-  const { items, summary, categories, usageTrend, loading, error, updateItem, archiveItem } =
-    useConsumablesData(search);
+  const {
+    items,
+    summary,
+    categories,
+    usageTrend,
+    loading,
+    error,
+    updateItem,
+    archiveItem,
+    createItem,
+  } = useConsumablesData(search);
 
   const stockValue = useMemo(() => {
     if (!summary?.stock_value) return '0';
@@ -64,6 +73,7 @@ const ProductsPage = () => {
           searchTerm={search}
           onSearchChange={setSearch}
           loading={loading}
+          onCreate={createItem}
           onUpdate={updateItem}
           onDelete={archiveItem}
         />

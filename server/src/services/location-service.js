@@ -9,7 +9,7 @@ export function buildLocationCode(rawLocation) {
 export async function ensureLocation(client, warehouseId, locationName) {
   const code = buildLocationCode(locationName);
   if (!code) return null;
-  const barcodeValue = `LOC:${code}`;
+  const barcodeValue = `LOC:W${warehouseId}:${code}`;
 
   const existing = await client.query(
     `select id, warehouse_id, code, name, barcode_value from locations where warehouse_id = $1 and code = $2`,

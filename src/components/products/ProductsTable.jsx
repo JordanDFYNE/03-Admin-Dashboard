@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
-import { Barcode, Pencil, Search, Trash2, TriangleAlert, X } from 'lucide-react';
+import { Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const PAGE_SIZE = 10;
@@ -8,16 +9,29 @@ const PAGE_SIZE = 10;
 const emptyFormState = {
   id: null,
   name: '',
+  sku: '',
   unitType: '',
+  locations: '',
+  quantityAvailable: 0,
+  contactForReorder: '',
   reorderPoint: 0,
   reorderQuantity: 0,
 };
 
-const ProductsTable = ({ items, searchTerm, onSearchChange, loading, onUpdate, onDelete }) => {
+const ProductsTable = ({
+  items,
+  searchTerm,
+  onSearchChange,
+  loading,
+  onCreate,
+  onUpdate,
+  onDelete,
+}) => {
   const [page, setPage] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [editingItem, setEditingItem] = useState(emptyFormState);
+  const [creatingItem, setCreatingItem] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
 
@@ -51,6 +65,45 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading, onUpdate, o
       toast.success('Consumable updated');
     } catch (error) {
       toast.error(error.message || 'Failed to update consumable');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleCreate(event) {
+    event.preventDefault();
+    setIsSaving(true);
+
+    try {
+      const locationNames = editingItem.locations
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+        .map((name) => ({
+          name,
+          warehouseId: name.toLowerCase().includes('unit 3')
+            ? 2
+            : name.toLowerCase().includes('unit 4')
+              ? 3
+              : 1,
+        }));
+
+      await onCreate({
+        sku: editingItem.sku,
+        name: editingItem.name,
+        unitType: editingItem.unitType,
+        locations: locationNames,
+        quantityAvailable: Number(editingItem.quantityAvailable || 0),
+        contactForReorder: editingItem.contactForReorder,
+        reorderPoint: Number(editingItem.reorderPoint || 0),
+        reorderQuantity: Number(editingItem.reorderQuantity || 0),
+      });
+
+      setEditingItem(emptyFormState);
+      setCreatingItem(false);
+      toast.success('Consumable created');
+    } catch (error) {
+      toast.error(error.message || 'Failed to create consumable');
     } finally {
       setIsSaving(false);
     }
@@ -90,15 +143,28 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading, onUpdate, o
     >
       <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-semibold text-gray-100">Product List</h2>
-        <div className="relative w-full sm:w-auto sm:min-w-[260px]">
-          <input
-            type="text"
-            placeholder="Search consumables"
-            className="w-full rounded-lg bg-gray-700 py-3 pl-10 pr-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:py-2"
-            onChange={(event) => onSearchChange(event.target.value)}
-            value={searchTerm}
-          />
-          <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:min-w-[260px] sm:flex-row">
+          <div className="relative w-full sm:w-auto sm:min-w-[260px]">
+            <input
+              type="text"
+              placeholder="Search consumables"
+              className="w-full rounded-lg bg-gray-700 py-3 pl-10 pr-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:py-2"
+              onChange={(event) => onSearchChange(event.target.value)}
+              value={searchTerm}
+            />
+            <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setCreatingItem(true);
+              setEditingItem(emptyFormState);
+            }}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 sm:py-2"
+          >
+            <Plus size={16} />
+            Add
+          </button>
         </div>
       </div>
 
@@ -113,16 +179,16 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading, onUpdate, o
                 Unit Type
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Barcode
+                Locations
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Available
+                Quantity Available
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Reorder Point
+                Contact
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Last 7 Days
+                Reorder List
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
                 Actions
@@ -146,7 +212,12 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading, onUpdate, o
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-300">
                     <div className="flex flex-col">
-                      <span>{product.name}</span>
+                      <Link
+                        to={`/products/${product.id}`}
+                        className="transition hover:text-white hover:underline"
+                      >
+                        {product.name}
+                      </Link>
                       <span className="text-xs text-gray-500">{product.sku}</span>
                     </div>
                   </td>
@@ -154,24 +225,16 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading, onUpdate, o
                     {product.unit_type}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    <div className="flex items-center gap-2">
-                      <Barcode size={16} className="text-gray-500" />
-                      <span>{product.barcode_value || 'Pending'}</span>
-                    </div>
+                    <span className="block max-w-xs truncate">{product.locations}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                     {Number(product.total_qty).toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    <div className="flex items-center gap-2">
-                      {Number(product.total_qty) <= Number(product.reorder_point) ? (
-                        <TriangleAlert size={16} className="text-amber-400" />
-                      ) : null}
-                      <span>{Number(product.reorder_point).toLocaleString()}</span>
-                    </div>
+                    <span>{product.contact_for_reorder || product.supplier_name || '-'}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {Number(product.last_7_day_usage || 0).toLocaleString()}
+                    {product.reorder_list}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-300">
                     <div className="flex justify-end gap-2">
@@ -217,7 +280,12 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading, onUpdate, o
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-white">{product.name}</p>
+                  <Link
+                    to={`/products/${product.id}`}
+                    className="text-sm font-semibold text-white transition hover:text-slate-200 hover:underline"
+                  >
+                    {product.name}
+                  </Link>
                   <p className="mt-1 text-xs text-slate-400">{product.sku}</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -243,22 +311,26 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading, onUpdate, o
 
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300">
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Barcode</p>
-                  <p className="mt-1 break-all">{product.barcode_value || 'Pending'}</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Locations</p>
+                  <p className="mt-1 break-words">{product.locations}</p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Available</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Quantity Available
+                  </p>
                   <p className="mt-1 text-base font-semibold text-white">
                     {Number(product.total_qty).toLocaleString()}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Reorder Point</p>
-                  <p className="mt-1">{Number(product.reorder_point).toLocaleString()}</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Contact</p>
+                  <p className="mt-1 break-words">
+                    {product.contact_for_reorder || product.supplier_name || '-'}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Last 7 Days</p>
-                  <p className="mt-1">{Number(product.last_7_day_usage || 0).toLocaleString()}</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Reorder List</p>
+                  <p className="mt-1">{product.reorder_list}</p>
                 </div>
               </div>
             </div>
@@ -300,21 +372,41 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading, onUpdate, o
         </div>
       ) : null}
 
-      {editingItem.id ? (
+      {creatingItem || editingItem.id ? (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/70 px-4">
           <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">Update consumable</h3>
+              <h3 className="text-lg font-semibold text-white">
+                {creatingItem ? 'Add consumable' : 'Update consumable'}
+              </h3>
               <button
                 type="button"
-                onClick={() => setEditingItem(emptyFormState)}
+                onClick={() => {
+                  setEditingItem(emptyFormState);
+                  setCreatingItem(false);
+                }}
                 className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <form className="space-y-4" onSubmit={handleSave}>
+            <form className="space-y-4" onSubmit={creatingItem ? handleCreate : handleSave}>
+              {creatingItem ? (
+                <label className="block text-sm text-slate-300">
+                  <span className="mb-2 block">SKU</span>
+                  <input
+                    type="text"
+                    value={editingItem.sku}
+                    onChange={(event) =>
+                      setEditingItem((current) => ({ ...current, sku: event.target.value }))
+                    }
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white"
+                  />
+                  <span className="mt-2 block text-xs text-slate-500">Optional</span>
+                </label>
+              ) : null}
+
               <label className="block text-sm text-slate-300">
                 <span className="mb-2 block">Name</span>
                 <input
@@ -339,6 +431,53 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading, onUpdate, o
                 />
               </label>
 
+              {creatingItem ? (
+                <>
+                  <label className="block text-sm text-slate-300">
+                    <span className="mb-2 block">Locations</span>
+                    <input
+                      type="text"
+                      value={editingItem.locations}
+                      onChange={(event) =>
+                        setEditingItem((current) => ({ ...current, locations: event.target.value }))
+                      }
+                      placeholder="Unit 1, Unit 3"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white"
+                    />
+                  </label>
+
+                  <label className="block text-sm text-slate-300">
+                    <span className="mb-2 block">Quantity Available</span>
+                    <input
+                      type="number"
+                      value={editingItem.quantityAvailable}
+                      onChange={(event) =>
+                        setEditingItem((current) => ({
+                          ...current,
+                          quantityAvailable: event.target.value,
+                        }))
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white"
+                    />
+                  </label>
+
+                  <label className="block text-sm text-slate-300">
+                    <span className="mb-2 block">Contact</span>
+                    <input
+                      type="text"
+                      value={editingItem.contactForReorder}
+                      onChange={(event) =>
+                        setEditingItem((current) => ({
+                          ...current,
+                          contactForReorder: event.target.value,
+                        }))
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white"
+                    />
+                  </label>
+                </>
+              ) : null}
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm text-slate-300">
                   <span className="mb-2 block">Reorder Point</span>
@@ -353,6 +492,9 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading, onUpdate, o
                     }
                     className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white"
                   />
+                  {creatingItem ? (
+                    <span className="mt-2 block text-xs text-slate-500">Optional</span>
+                  ) : null}
                 </label>
 
                 <label className="block text-sm text-slate-300">
@@ -374,7 +516,10 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading, onUpdate, o
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setEditingItem(emptyFormState)}
+                  onClick={() => {
+                    setEditingItem(emptyFormState);
+                    setCreatingItem(false);
+                  }}
                   className="rounded-xl border border-slate-700 px-4 py-3 text-sm text-slate-300"
                 >
                   Cancel
@@ -384,7 +529,7 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading, onUpdate, o
                   disabled={isSaving}
                   className="rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-60"
                 >
-                  {isSaving ? 'Saving...' : 'Save changes'}
+                  {isSaving ? 'Saving...' : creatingItem ? 'Create consumable' : 'Save changes'}
                 </button>
               </div>
             </form>

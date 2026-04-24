@@ -4,6 +4,8 @@ import { asyncHandler } from '../utils/http.js';
 import { pool } from '../db/pool.js';
 import {
   archiveConsumable,
+  createConsumable,
+  getConsumableById,
   getCategoryBreakdown,
   getConsumableSummary,
   getLowStockAlerts,
@@ -12,6 +14,7 @@ import {
   updateConsumable,
 } from '../services/consumables-service.js';
 import { HttpError } from '../utils/http.js';
+import { withTransaction } from '../db/query.js';
 
 const router = Router();
 
@@ -26,6 +29,41 @@ router.get(
     });
 
     response.json({ items });
+  })
+);
+
+router.post(
+  '/',
+  asyncHandler(async (request, response) => {
+    const {
+      sku,
+      name,
+      unitType,
+      locations = [],
+      quantityAvailable = 0,
+      contactForReorder = '',
+      reorderPoint = 0,
+      reorderQuantity = 0,
+    } = request.body || {};
+
+    if (!name) {
+      throw new HttpError(400, 'name is required');
+    }
+
+    const item = await withTransaction(async (client) =>
+      createConsumable(client, {
+        sku,
+        name,
+        unitType,
+        locations,
+        quantityAvailable: Number(quantityAvailable || 0),
+        contactForReorder,
+        reorderPoint: Number(reorderPoint || 0),
+        reorderQuantity: Number(reorderQuantity || 0),
+      })
+    );
+
+    response.status(201).json({ item });
   })
 );
 
@@ -48,20 +86,30 @@ router.get(
   })
 );
 
+router.get(
+  '/:id',
+  asyncHandler(async (request, response) => {
+    const detail = await getConsumableById(pool, request.params.id);
+
+    if (!detail) {
+      throw new HttpError(404, 'Consumable not found');
+    }
+
+    response.json(detail);
+  })
+);
+
 router.patch(
   '/:id',
   asyncHandler(async (request, response) => {
-    const { name, unitType, reorderPoint, reorderQuantity } = request.body || {};
+    const { name } = request.body || {};
 
-    if (!name || !unitType) {
-      throw new HttpError(400, 'name and unitType are required');
+    if (!name) {
+      throw new HttpError(400, 'name is required');
     }
 
     const item = await updateConsumable(pool, request.params.id, {
-      name,
-      unitType,
-      reorderPoint: Number(reorderPoint || 0),
-      reorderQuantity: Number(reorderQuantity || 0),
+      ...request.body,
     });
 
     if (!item) {
