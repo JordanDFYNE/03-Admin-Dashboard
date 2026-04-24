@@ -14,6 +14,7 @@ function getAuthHeaders() {
 
 export async function apiRequest(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
+    cache: 'no-store',
     headers: {
       'Content-Type': 'application/json',
       ...getAuthHeaders(),
@@ -36,9 +37,18 @@ export async function fetchConsumables(search = '') {
   const params = new URLSearchParams();
   if (search) params.set('search', search);
   const payload = await apiRequest(`/consumables?${params.toString()}`);
-  return payload.items;
+  return payload?.items ?? [];
 }
 
 export async function fetchConsumablesSummary() {
-  return apiRequest('/consumables/summary');
+  const payload = await apiRequest('/consumables/summary');
+
+  return (
+    payload ?? {
+      summary: null,
+      categories: [],
+      usageTrend: [],
+      lowStockAlerts: [],
+    }
+  );
 }

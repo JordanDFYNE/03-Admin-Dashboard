@@ -1,4 +1,4 @@
-const CACHE_NAME = 'warehouse-pwa-v1';
+const CACHE_NAME = 'warehouse-pwa-v2';
 const APP_SHELL = ['/', '/products', '/manifest.webmanifest', '/pwa-192.png', '/pwa-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -20,17 +20,30 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) return cachedResponse;
+  const requestUrl = new URL(event.request.url);
+  const isSameOrigin = requestUrl.origin === self.location.origin;
+  const isNavigation = event.request.mode === 'navigate';
 
-      return fetch(event.request)
-        .then((networkResponse) => {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-          return networkResponse;
-        })
-        .catch(() => caches.match('/products'));
-    })
+  if (!isSameOrigin || requestUrl.pathname.startsWith('/api/')) {
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request)
+      .then((networkResponse) => {
+        const responseClone = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+        return networkResponse;
+      })
+      .catch(async () => {
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) return cachedResponse;
+
+        if (isNavigation) {
+          return caches.match('/products');
+        }
+
+        throw new Error('Network request failed');
+      })
   );
 });

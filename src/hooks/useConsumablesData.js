@@ -24,13 +24,17 @@ export function useConsumablesData(search) {
 
         if (!active) return;
 
-        setItems(consumableItems);
-        setSummary(summaryPayload.summary);
-        setCategories(summaryPayload.categories);
-        setUsageTrend(summaryPayload.usageTrend);
+        setItems(Array.isArray(consumableItems) ? consumableItems : []);
+        setSummary(summaryPayload?.summary ?? null);
+        setCategories(Array.isArray(summaryPayload?.categories) ? summaryPayload.categories : []);
+        setUsageTrend(Array.isArray(summaryPayload?.usageTrend) ? summaryPayload.usageTrend : []);
       } catch (loadError) {
         if (!active) return;
         setError(loadError.message);
+        setItems([]);
+        setSummary(null);
+        setCategories([]);
+        setUsageTrend([]);
       } finally {
         if (active) {
           setLoading(false);

@@ -11,13 +11,13 @@ import SettingsPage from './pages/SettingsPage.jsx';
 
 function App() {
   return (
-    <div className="flex min-h-screen overflow-y-auto bg-gray-900 text-gray-100 md:h-screen md:overflow-hidden">
+    <div className="flex min-h-screen bg-gray-900 text-gray-100">
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 opacity-80" />
         <div className="absolute inset-0 backdrop-blur-sm" />
       </div>
       <Sidebar />
-      <div className="relative z-10 flex-1 min-h-0 overflow-visible pb-24 md:overflow-y-auto md:pb-0">
+      <div className="relative z-10 flex-1 pb-24 md:pb-0">
         <Routes>
           <Route path="/" element={<OverviewPage />} />
           <Route path="/products" element={<ProductsPage />} />
