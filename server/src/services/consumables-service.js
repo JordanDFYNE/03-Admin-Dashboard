@@ -1,3 +1,5 @@
+import { normalizeName } from '../utils/parsers.js';
+
 export async function listConsumables(client, { search = '', lowStock = false } = {}) {
   const params = [];
   const conditions = [];
@@ -52,13 +54,56 @@ export async function listConsumables(client, { search = '', lowStock = false } 
           and sm.occurred_at >= now() - interval '7 days'
         group by sml.consumable_id
       ) usage on usage.consumable_id = c.id
-      ${whereClause}
+      where c.is_active = true
+      ${whereClause ? `and ${whereClause.replace(/^where\s+/i, '')}` : ''}
       order by c.name asc
     `,
     params
   );
 
   return result.rows;
+}
+
+export async function updateConsumable(client, consumableId, payload) {
+  const normalizedName = normalizeName(payload.name);
+  const result = await client.query(
+    `
+      update consumables
+      set name = $2,
+          normalized_name = $3,
+          unit_type = $4,
+          default_reorder_point = $5,
+          default_reorder_qty = $6,
+          updated_at = now()
+      where id = $1 and is_active = true
+      returning id, sku, name, unit_type, default_reorder_point, default_reorder_qty
+    `,
+    [
+      consumableId,
+      payload.name,
+      normalizedName,
+      payload.unitType,
+      payload.reorderPoint,
+      payload.reorderQuantity,
+    ]
+  );
+
+  return result.rows[0] || null;
+}
+
+export async function archiveConsumable(client, consumableId) {
+  const result = await client.query(
+    `
+      update consumables
+      set is_active = false,
+          updated_at = now()
+      where id = $1 and is_active = true
+      returning id, name
+    `,
+    [consumableId]
+  );
+
+  return result.rows[0] || null;
 }
 
 export async function getConsumableSummary(client) {

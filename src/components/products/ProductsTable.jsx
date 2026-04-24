@@ -1,11 +1,23 @@
 import { motion } from 'framer-motion';
-import { Barcode, Search, TriangleAlert } from 'lucide-react';
+import { Barcode, Pencil, Search, Trash2, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 
 const PAGE_SIZE = 10;
 
-const ProductsTable = ({ items, searchTerm, onSearchChange, loading }) => {
+const emptyFormState = {
+  id: null,
+  name: '',
+  unitType: '',
+  reorderPoint: 0,
+  reorderQuantity: 0,
+};
+
+const ProductsTable = ({ items, searchTerm, onSearchChange, loading, onUpdate, onDelete }) => {
   const [page, setPage] = useState(1);
+  const [isSaving, setIsSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [editingItem, setEditingItem] = useState(emptyFormState);
 
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
 
@@ -23,6 +35,51 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading }) => {
       setPage(totalPages);
     }
   }, [page, totalPages]);
+
+  async function handleSave(event) {
+    event.preventDefault();
+    setIsSaving(true);
+
+    try {
+      await onUpdate(editingItem.id, {
+        name: editingItem.name,
+        unitType: editingItem.unitType,
+        reorderPoint: Number(editingItem.reorderPoint || 0),
+        reorderQuantity: Number(editingItem.reorderQuantity || 0),
+      });
+      setEditingItem(emptyFormState);
+      toast.success('Consumable updated');
+    } catch (error) {
+      toast.error(error.message || 'Failed to update consumable');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    setIsSaving(true);
+
+    try {
+      await onDelete(deleteId);
+      setDeleteId(null);
+      toast.success('Consumable archived');
+    } catch (error) {
+      toast.error(error.message || 'Failed to archive consumable');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function startEdit(product) {
+    setEditingItem({
+      id: product.id,
+      name: product.name,
+      unitType: product.unit_type,
+      reorderPoint: Number(product.reorder_point || 0),
+      reorderQuantity: Number(product.default_reorder_qty || product.reorder_point || 0),
+    });
+  }
 
   return (
     <motion.div
@@ -67,12 +124,15 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading }) => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                 Last 7 Days
               </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-700">
             {loading ? (
               <tr>
-                <td className="px-6 py-8 text-sm text-gray-300" colSpan={6}>
+                <td className="px-6 py-8 text-sm text-gray-300" colSpan={7}>
                   Loading consumables...
                 </td>
               </tr>
@@ -113,11 +173,29 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading }) => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                     {Number(product.last_7_day_usage || 0).toLocaleString()}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-300">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(product)}
+                        className="rounded-lg border border-slate-700 px-3 py-2 text-slate-300 transition hover:bg-slate-700"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteId(product.id)}
+                        className="rounded-lg border border-red-500/40 px-3 py-2 text-red-300 transition hover:bg-red-500/10"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
                 </motion.tr>
               ))
             ) : (
               <tr>
-                <td className="px-6 py-8 text-sm text-gray-400" colSpan={6}>
+                <td className="px-6 py-8 text-sm text-gray-400" colSpan={7}>
                   No consumables match this search.
                 </td>
               </tr>
@@ -142,9 +220,25 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading }) => {
                   <p className="text-sm font-semibold text-white">{product.name}</p>
                   <p className="mt-1 text-xs text-slate-400">{product.sku}</p>
                 </div>
-                <span className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300">
-                  {product.unit_type}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300">
+                    {product.unit_type}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => startEdit(product)}
+                    className="rounded-lg border border-slate-700 p-2 text-slate-300 transition hover:bg-slate-700"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteId(product.id)}
+                    className="rounded-lg border border-red-500/40 p-2 text-red-300 transition hover:bg-red-500/10"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300">
@@ -202,6 +296,127 @@ const ProductsTable = ({ items, searchTerm, onSearchChange, loading }) => {
             >
               Next
             </button>
+          </div>
+        </div>
+      ) : null}
+
+      {editingItem.id ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/70 px-4">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">Update consumable</h3>
+              <button
+                type="button"
+                onClick={() => setEditingItem(emptyFormState)}
+                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form className="space-y-4" onSubmit={handleSave}>
+              <label className="block text-sm text-slate-300">
+                <span className="mb-2 block">Name</span>
+                <input
+                  type="text"
+                  value={editingItem.name}
+                  onChange={(event) =>
+                    setEditingItem((current) => ({ ...current, name: event.target.value }))
+                  }
+                  className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white"
+                />
+              </label>
+
+              <label className="block text-sm text-slate-300">
+                <span className="mb-2 block">Unit Type</span>
+                <input
+                  type="text"
+                  value={editingItem.unitType}
+                  onChange={(event) =>
+                    setEditingItem((current) => ({ ...current, unitType: event.target.value }))
+                  }
+                  className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white"
+                />
+              </label>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm text-slate-300">
+                  <span className="mb-2 block">Reorder Point</span>
+                  <input
+                    type="number"
+                    value={editingItem.reorderPoint}
+                    onChange={(event) =>
+                      setEditingItem((current) => ({
+                        ...current,
+                        reorderPoint: event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white"
+                  />
+                </label>
+
+                <label className="block text-sm text-slate-300">
+                  <span className="mb-2 block">Reorder Quantity</span>
+                  <input
+                    type="number"
+                    value={editingItem.reorderQuantity}
+                    onChange={(event) =>
+                      setEditingItem((current) => ({
+                        ...current,
+                        reorderQuantity: event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white"
+                  />
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(emptyFormState)}
+                  className="rounded-xl border border-slate-700 px-4 py-3 text-sm text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-60"
+                >
+                  {isSaving ? 'Saving...' : 'Save changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteId ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/70 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-white">Archive consumable?</h3>
+            <p className="mt-3 text-sm text-slate-400">
+              This will remove the consumable from the active list but keep its history in the
+              database.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteId(null)}
+                className="rounded-xl border border-slate-700 px-4 py-3 text-sm text-slate-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isSaving}
+                className="rounded-xl bg-red-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {isSaving ? 'Archiving...' : 'Archive'}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

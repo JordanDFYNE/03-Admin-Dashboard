@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { fetchConsumables, fetchConsumablesSummary } from '../lib/api.js';
+import {
+  archiveConsumable,
+  fetchConsumables,
+  fetchConsumablesSummary,
+  updateConsumable,
+} from '../lib/api.js';
 
 export function useConsumablesData(search) {
   const [items, setItems] = useState([]);
@@ -9,6 +14,18 @@ export function useConsumablesData(search) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  async function refresh() {
+    const [consumableItems, summaryPayload] = await Promise.all([
+      fetchConsumables(search),
+      fetchConsumablesSummary(),
+    ]);
+
+    setItems(Array.isArray(consumableItems) ? consumableItems : []);
+    setSummary(summaryPayload?.summary ?? null);
+    setCategories(Array.isArray(summaryPayload?.categories) ? summaryPayload.categories : []);
+    setUsageTrend(Array.isArray(summaryPayload?.usageTrend) ? summaryPayload.usageTrend : []);
+  }
+
   useEffect(() => {
     let active = true;
 
@@ -17,17 +34,8 @@ export function useConsumablesData(search) {
         setLoading(true);
         setError('');
 
-        const [consumableItems, summaryPayload] = await Promise.all([
-          fetchConsumables(search),
-          fetchConsumablesSummary(),
-        ]);
-
         if (!active) return;
-
-        setItems(Array.isArray(consumableItems) ? consumableItems : []);
-        setSummary(summaryPayload?.summary ?? null);
-        setCategories(Array.isArray(summaryPayload?.categories) ? summaryPayload.categories : []);
-        setUsageTrend(Array.isArray(summaryPayload?.usageTrend) ? summaryPayload.usageTrend : []);
+        await refresh();
       } catch (loadError) {
         if (!active) return;
         setError(loadError.message);
@@ -57,6 +65,15 @@ export function useConsumablesData(search) {
       usageTrend,
       loading,
       error,
+      refresh,
+      updateItem: async (id, payload) => {
+        await updateConsumable(id, payload);
+        await refresh();
+      },
+      archiveItem: async (id) => {
+        await archiveConsumable(id);
+        await refresh();
+      },
     }),
     [items, summary, categories, usageTrend, loading, error]
   );

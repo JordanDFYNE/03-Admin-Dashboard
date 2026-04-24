@@ -52,3 +52,20 @@ export async function fetchConsumablesSummary() {
     }
   );
 }
+
+export async function updateConsumable(id, payload) {
+  const response = await apiRequest(`/consumables/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+
+  return response?.item ?? null;
+}
+
+export async function archiveConsumable(id) {
+  const response = await apiRequest(`/consumables/${id}`, {
+    method: 'DELETE',
+  });
+
+  return response?.item ?? null;
+}

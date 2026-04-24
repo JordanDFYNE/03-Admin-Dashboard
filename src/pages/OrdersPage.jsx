@@ -16,7 +16,7 @@ const orderStats = {
 const OrdersPage = () => {
   return (
     <div className="relative z-10">
-      <Header title="Orders" />
+      <Header title="TEST" />
       <main className="max-w-7xl mx-auto py-6 px-4 lg:px-8">
         <motion.div
           className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8"

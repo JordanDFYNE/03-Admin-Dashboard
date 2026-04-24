@@ -3,12 +3,15 @@ import { requireAuth } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/http.js';
 import { pool } from '../db/pool.js';
 import {
+  archiveConsumable,
   getCategoryBreakdown,
   getConsumableSummary,
   getLowStockAlerts,
   getUsageTrend,
   listConsumables,
+  updateConsumable,
 } from '../services/consumables-service.js';
+import { HttpError } from '../utils/http.js';
 
 const router = Router();
 
@@ -42,6 +45,43 @@ router.get(
       usageTrend,
       lowStockAlerts,
     });
+  })
+);
+
+router.patch(
+  '/:id',
+  asyncHandler(async (request, response) => {
+    const { name, unitType, reorderPoint, reorderQuantity } = request.body || {};
+
+    if (!name || !unitType) {
+      throw new HttpError(400, 'name and unitType are required');
+    }
+
+    const item = await updateConsumable(pool, request.params.id, {
+      name,
+      unitType,
+      reorderPoint: Number(reorderPoint || 0),
+      reorderQuantity: Number(reorderQuantity || 0),
+    });
+
+    if (!item) {
+      throw new HttpError(404, 'Consumable not found');
+    }
+
+    response.json({ item });
+  })
+);
+
+router.delete(
+  '/:id',
+  asyncHandler(async (request, response) => {
+    const item = await archiveConsumable(pool, request.params.id);
+
+    if (!item) {
+      throw new HttpError(404, 'Consumable not found');
+    }
+
+    response.json({ item, archived: true });
   })
 );
 
