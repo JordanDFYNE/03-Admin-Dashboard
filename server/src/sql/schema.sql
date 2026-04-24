@@ -77,6 +77,7 @@ create table if not exists consumables (
   tags text[] not null default '{}',
   stock_status text not null default 'ok',
   ordered boolean not null default false,
+  ordered_at timestamptz,
   source_locations text[] not null default '{}',
   default_reorder_point numeric(14,3) not null default 0,
   default_reorder_qty numeric(14,3) not null default 0,
@@ -87,6 +88,9 @@ create table if not exists consumables (
 
 alter table consumables
 add column if not exists source_locations text[] not null default '{}';
+
+alter table consumables
+add column if not exists ordered_at timestamptz;
 
 create table if not exists barcode_records (
   id bigserial primary key,

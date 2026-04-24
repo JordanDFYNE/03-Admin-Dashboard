@@ -53,6 +53,10 @@ export async function listConsumables(client, { search = '', lowStock = false } 
         c.unit_price,
         c.stock_status,
         c.ordered,
+        case
+          when coalesce(stock.total_qty, 0) <= coalesce(rr.min_qty, c.default_reorder_point, 0) then 'Yes'
+          else 'No'
+        end as low_stock,
         c.quantity_on_order,
         c.default_reorder_point,
         c.default_reorder_qty,
@@ -126,6 +130,11 @@ export async function updateConsumable(client, consumableId, payload) {
           min_order_qty = $16,
           stock_status = $17,
           ordered = $18,
+          ordered_at = case
+            when $18 = true and ordered = false then now()
+            when $18 = false then null
+            else ordered_at
+          end,
           default_reorder_point = $19,
           default_reorder_qty = $20,
           tags = $21,
@@ -461,6 +470,70 @@ export async function getLowStockAlerts(client) {
     where ra.status = 'open'
     order by ra.detected_at desc, c.name asc
   `);
+
+  return result.rows;
+}
+
+export async function getOrderSummary(client) {
+  const result = await client.query(`
+    select
+      count(*) filter (where c.ordered = true)::int as total_orders,
+      count(*) filter (where c.ordered = true and c.ordered_at is not null)::int as active_orders,
+      count(*) filter (
+        where c.ordered = true
+          and c.estimated_delivery_date is not null
+          and c.estimated_delivery_date < current_date
+      )::int as overdue_orders,
+      coalesce(sum(c.quantity_on_order), 0)::numeric(14,3) as quantity_on_order
+    from consumables c
+    where c.is_active = true
+  `);
+
+  return result.rows[0];
+}
+
+export async function listOrders(client, { search = '' } = {}) {
+  const params = [];
+  const conditions = ['c.is_active = true', 'c.ordered = true'];
+
+  if (search) {
+    params.push(`%${search}%`);
+    conditions.push(`(c.name ilike $${params.length} or c.sku ilike $${params.length})`);
+  }
+
+  const result = await client.query(
+    `
+      select
+        c.id,
+        c.sku,
+        c.name,
+        c.quantity_on_order,
+        c.ordered_at,
+        c.estimated_delivery_date,
+        c.transit_time_text,
+        c.contact_for_reorder,
+        s.name as supplier_name,
+        case
+          when c.estimated_delivery_date is not null then greatest((c.estimated_delivery_date - current_date), 0)
+          when c.ordered_at is not null and c.transit_time_text ~ '\\d+' then greatest(
+            regexp_replace(c.transit_time_text, '^.*?(\\d+).*$','\\1')::int - (current_date - c.ordered_at::date),
+            0
+          )
+          else null
+        end as days_remaining,
+        case
+          when c.estimated_delivery_date is not null and c.estimated_delivery_date < current_date then 'Overdue'
+          when c.estimated_delivery_date is not null and c.estimated_delivery_date = current_date then 'Due today'
+          when c.ordered = true then 'Ordered'
+          else 'Pending'
+        end as order_status
+      from consumables c
+      left join suppliers s on s.id = c.supplier_id
+      where ${conditions.join(' and ')}
+      order by c.updated_at desc, c.name asc
+    `,
+    params
+  );
 
   return result.rows;
 }

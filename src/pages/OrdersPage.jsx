@@ -1,25 +1,26 @@
 import Header from '../components/common/Header.jsx';
 import StatCard from '../components/common/StatCard.jsx';
-import { ShoppingBag, Clock, CheckCircle, DollarSign } from 'lucide-react';
+import { ShoppingBag, Clock, AlertTriangle, Package } from 'lucide-react';
 import { motion } from 'framer-motion';
-import DailyOrders from '../components/orders/DailyOrders.jsx';
-import OrderDistribution from '../components/orders/OrderDistribution.jsx';
+import { useMemo, useState } from 'react';
 import OrdersTable from '../components/orders/OrdersTable.jsx';
-
-const orderStats = {
-  totalOrders: '1,245',
-  pendingOrders: '123',
-  completedOrders: '1,100',
-  TotalRevenue: '$98,765',
-};
+import { useOrdersData } from '../hooks/useOrdersData.js';
 
 const OrdersPage = () => {
+  const [search, setSearch] = useState('');
+  const { items, summary, loading, error } = useOrdersData(search);
+
+  const onOrderQuantity = useMemo(
+    () => Number(summary?.quantity_on_order || 0).toLocaleString(),
+    [summary]
+  );
+
   return (
     <div className="relative z-10">
       <Header title="Order" />
-      <main className="max-w-7xl mx-auto py-6 px-4 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
         <motion.div
-          className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8"
+          className="mb-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1 }}
@@ -27,33 +28,36 @@ const OrdersPage = () => {
           <StatCard
             name="Total Orders"
             icons={ShoppingBag}
-            value={orderStats.totalOrders}
+            value={summary?.total_orders ?? (loading ? '...' : 0)}
             color="#6366F1"
           />
           <StatCard
-            name="Pending Orders"
+            name="Active Orders"
             icons={Clock}
-            value={orderStats.pendingOrders}
+            value={summary?.active_orders ?? (loading ? '...' : 0)}
             color="#F59E0B"
           />
           <StatCard
-            name="Completed Orders"
-            icons={CheckCircle}
-            value={orderStats.completedOrders}
-            color="#10B981"
-          />
-          <StatCard
-            name="Total Revenue"
-            icons={DollarSign}
-            value={orderStats.totalRevenue}
+            name="Overdue"
+            icons={AlertTriangle}
+            value={summary?.overdue_orders ?? (loading ? '...' : 0)}
             color="#EF4444"
           />
+          <StatCard name="Qty On Order" icons={Package} value={onOrderQuantity} color="#10B981" />
         </motion.div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <DailyOrders />
-          <OrderDistribution />
-        </div>
-        <OrdersTable />
+
+        {error ? (
+          <div className="mb-8 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200">
+            {error}
+          </div>
+        ) : null}
+
+        <OrdersTable
+          items={items}
+          searchTerm={search}
+          onSearchChange={setSearch}
+          loading={loading}
+        />
       </main>
     </div>
   );

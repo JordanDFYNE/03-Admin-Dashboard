@@ -8,8 +8,10 @@ import {
   getConsumableById,
   getCategoryBreakdown,
   getConsumableSummary,
+  getOrderSummary,
   getLowStockAlerts,
   getUsageTrend,
+  listOrders,
   listConsumables,
   updateConsumable,
 } from '../services/consumables-service.js';
@@ -83,6 +85,25 @@ router.get(
       usageTrend,
       lowStockAlerts,
     });
+  })
+);
+
+router.get(
+  '/orders/summary',
+  asyncHandler(async (request, response) => {
+    const summary = await getOrderSummary(pool);
+    response.json({ summary });
+  })
+);
+
+router.get(
+  '/orders',
+  asyncHandler(async (request, response) => {
+    const items = await listOrders(pool, {
+      search: request.query.search || '',
+    });
+
+    response.json({ items });
   })
 );
 

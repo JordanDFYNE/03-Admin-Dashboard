@@ -82,3 +82,15 @@ export async function createConsumable(payload) {
 
   return response?.item ?? null;
 }
+
+export async function fetchOrders(search = '') {
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  const payload = await apiRequest(`/consumables/orders?${params.toString()}`);
+  return payload?.items ?? [];
+}
+
+export async function fetchOrderSummary() {
+  const payload = await apiRequest('/consumables/orders/summary');
+  return payload?.summary ?? null;
+}
